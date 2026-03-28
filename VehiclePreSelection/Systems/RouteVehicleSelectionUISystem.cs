@@ -51,6 +51,7 @@ namespace VehiclePreSelection
         private ValueBinding<string> m_SelectedSecondaryIndicesBinding;
         private ValueBinding<string> m_CurrentPrimaryVehicleBinding;
         private ValueBinding<string> m_CurrentSecondaryVehicleBinding;
+        private ValueBinding<bool> m_AutoRandomColorEnabledBinding;
 
         private EntityQuery m_TempRouteQuery;
         private EntityQuery m_DepotQuery;
@@ -108,10 +109,12 @@ namespace VehiclePreSelection
             AddBinding(m_SelectedSecondaryIndicesBinding = new ValueBinding<string>(Group, "selectedSecondaryIndicesJson", "[]"));
             AddBinding(m_CurrentPrimaryVehicleBinding = new ValueBinding<string>(Group, "currentPrimaryVehicle", string.Empty));
             AddBinding(m_CurrentSecondaryVehicleBinding = new ValueBinding<string>(Group, "currentSecondaryVehicle", string.Empty));
+            AddBinding(m_AutoRandomColorEnabledBinding = new ValueBinding<bool>(Group, "autoRandomColorEnabled", false));
 
             AddBinding(new TriggerBinding<int>(Group, "togglePrimaryIndex", TogglePrimaryIndex));
             AddBinding(new TriggerBinding<int>(Group, "toggleSecondaryIndex", ToggleSecondaryIndex));
             AddBinding(new TriggerBinding(Group, "clearSelections", ClearSelections));
+            AddBinding(new TriggerBinding<bool>(Group, "setAutoRandomColorEnabled", SetAutoRandomColorEnabled));
         }
 
         protected override void OnDestroy()
@@ -162,6 +165,7 @@ namespace VehiclePreSelection
 
             m_IsPlanningRouteBinding.Update(hasActiveRoutePrefab);
             m_RoutePrefabBinding.Update(routePrefabName);
+            m_AutoRandomColorEnabledBinding.Update(hasActiveRoutePrefab && IsAutoRandomColorEnabled(routePrefab));
             UpdateUiBindings(hasActiveRoutePrefab, hasTempRoute, routeEntity, routeContext, routePrefabName);
         }
 
@@ -529,6 +533,32 @@ namespace VehiclePreSelection
             {
                 var buffer = EnsureVehicleModelBuffer(routeEntity);
                 buffer.Clear();
+            }
+        }
+
+        private void SetAutoRandomColorEnabled(bool enabled)
+        {
+            if (!TryGetActiveRoutePrefab(out var routePrefab, out _))
+            {
+                return;
+            }
+
+            var key = RouteColorRandomizationUtils.BuildKey(routePrefab, EntityManager, m_PrefabSystem);
+            var preference = PersistedRouteSelectionStore.FindOrCreateColorPreference(m_PersistedSelections, key);
+            preference.enabled = enabled;
+
+            if (!enabled)
+            {
+                m_PersistedSelections.colors.RemoveAll(colorPreference => colorPreference.key == key && !colorPreference.enabled);
+            }
+
+            try
+            {
+                PersistedRouteSelectionStore.Save(m_PersistedSelections);
+            }
+            catch (System.Exception ex)
+            {
+                Mod.log.Error(ex, "Failed to save persisted selections");
             }
         }
 
@@ -1212,6 +1242,13 @@ namespace VehiclePreSelection
                 && routeContext.TransportType == TransportType.Train
                 && routeContext.CargoTransport
                 && !routeContext.PassengerTransport;
+        }
+
+        private bool IsAutoRandomColorEnabled(Entity routePrefab)
+        {
+            var key = RouteColorRandomizationUtils.BuildKey(routePrefab, EntityManager, m_PrefabSystem);
+            var preference = PersistedRouteSelectionStore.FindColorPreference(m_PersistedSelections, key);
+            return preference?.enabled == true;
         }
     }
 }

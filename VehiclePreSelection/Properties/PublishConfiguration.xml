@@ -2,17 +2,17 @@
 	<!--Id must be set in order to update existed mod. it is not required for publishing mod for the first time-->
 	<ModId Value="139016" />
 	<!--Name of the mod to display to players-->
-	<DisplayName Value="Pre-Select Route Vehicles" />
+	<DisplayName Value="Route Planning Extension" />
 	<!--Short description of the mod-->
-	<ShortDescription Value="Choose transit vehicles while planning a route." />
+	<ShortDescription Value="Choose route vehicles and randomize route colors while planning." />
 	<!--Long description of the mod. Single line or multi line. Supports minimal markdown subset-->
 	<!--LongDescription Value="This is a long description" /-->
-	<LongDescription>Tired of the game randomly picking vehicles every time you create a route? Pre-Select Route Vehicles lets you choose them in advance while you are still planning the line. Pick vehicles directly from the route planning toolbox, use multi-select, and keep separate saved selections for different route types. Your selections are remembered and applied to the created route, so new lines use the vehicles you actually want instead of a random pick.
+	<LongDescription>Tired of the game giving you a vehicle you did not want to use, or making route colors tedious to manage? Route Planning Extension lets you choose vehicles in advance while you are still planning the line. Pick them directly from the route planning toolbox, use multi-select, save selections for different route types, and optionally enable random route colors with separate toggles per transport type. Random colors are applied when the route is created.
 	</LongDescription>
 	<!--Thumbnail-->
 	<Thumbnail Value="Properties/Thumbnail.png" />
 	<!--Screenshot, can be set multiple times-->
-	<Screenshot Value="screenshots/cargo-train-selection.png" />
+	<Screenshot Value="screenshots/cargo-train-selection-random-color.png" />
 	<Screenshot Value="screenshots/passenger-train-selection.png" />
 	<!--Tag, can be set multiple times-->
 	<Tag Value="Code Mod" />
@@ -20,18 +20,18 @@
 	<!--Link to the forum post where the mod can be discussed-->
 	<ForumLink Value="https://forum.paradoxplaza.com/forum/threads/pre-select-route-vehicles.1912807/" />
 	<!--Version of the mod-->
-	<ModVersion Value="0.1" />
+	<ModVersion Value="0.2.1" />
 	<!--Recommended version of the base game to use the mod-->
 	<GameVersion Value="1.5.*" />
 	<!--Dependency for the mod, can be set multiple times-->
 	<!--Required DLC, can be set multiple times. Supported values are "Landmark Buildings", "San Fransisco Set", "Beach Properties", "Urban Promenades", "Modern Architecture"-->
 	<!--Change log for new version. Single line or multi line. Supports minimal markdown subset-->
-	<ChangeLog>Initial release.
+	<ChangeLog>UI enhancements.
 	</ChangeLog>
 	<!--<ChangeLog>
 	</ChangeLog>-->
 	<!--External link, can be set multiple times. supported types are "discord", "github", "youtube", "twitch", "x", "paypal", "patreon", "buymeacoffee", "kofi", "crowdin", "gitlab", "gofundme"-->
-	<ExternalLink Type="discord" Url="https://discord.com/channels/1024242828114673724/1486613206423044190" />
+	<ExternalLink Type="discord" Url="https://discord.com/channels/1024242828114673724/1487249104471068894" />
 	<ExternalLink Type="github" Url="https://github.com/nicokatsu/CS2-PreSelectRouteVehicles" />
 	<!--Supported values Public, Private, Unlisted-->
 	<AccessLevel Value="Public" />

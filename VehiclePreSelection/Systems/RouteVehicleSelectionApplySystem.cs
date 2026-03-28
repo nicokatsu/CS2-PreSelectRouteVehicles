@@ -7,6 +7,7 @@ using Game.Tools;
 using Game.Vehicles;
 using Unity.Collections;
 using Unity.Entities;
+using UnityEngine;
 
 namespace VehiclePreSelection
 {
@@ -14,8 +15,10 @@ namespace VehiclePreSelection
     {
         private PrefabSystem m_PrefabSystem;
         private EntityQuery m_CreatedRouteQuery;
+        private EntityQuery m_ColoredRouteQuery;
         private EntityQuery m_TransportVehiclePrefabQuery;
         private EntityQuery m_WorkVehiclePrefabQuery;
+        private EntityArchetype m_ColorUpdateArchetype;
 
         protected override void OnCreate()
         {
@@ -29,8 +32,15 @@ namespace VehiclePreSelection
                 ComponentType.ReadOnly<PrefabRef>(),
                 ComponentType.Exclude<Temp>(),
                 ComponentType.Exclude<Deleted>());
+            m_ColoredRouteQuery = GetEntityQuery(
+                ComponentType.ReadOnly<Route>(),
+                ComponentType.ReadOnly<PrefabRef>(),
+                ComponentType.ReadOnly<Game.Routes.Color>(),
+                ComponentType.Exclude<Temp>(),
+                ComponentType.Exclude<Deleted>());
             m_TransportVehiclePrefabQuery = GetEntityQuery(TransportVehicleSelectData.GetEntityQueryDesc());
             m_WorkVehiclePrefabQuery = GetEntityQuery(WorkVehicleSelectData.GetEntityQueryDesc());
+            m_ColorUpdateArchetype = EntityManager.CreateArchetype(ComponentType.ReadWrite<Game.Common.Event>(), ComponentType.ReadWrite<ColorUpdated>());
         }
 
         protected override void OnUpdate()
@@ -51,10 +61,12 @@ namespace VehiclePreSelection
                 var savedSelection = PersistedRouteSelectionStore.Find(persistedSelections, routePrefabName);
                 if (savedSelection == null)
                 {
+                    ApplyRandomColorIfEnabled(routeEntity, prefabRef.m_Prefab, persistedSelections);
                     continue;
                 }
 
                 ApplySavedSelection(routeEntity, prefabRef.m_Prefab, savedSelection);
+                ApplyRandomColorIfEnabled(routeEntity, prefabRef.m_Prefab, persistedSelections);
             }
         }
 
@@ -152,6 +164,58 @@ namespace VehiclePreSelection
             return lineData.m_TransportType == TransportType.Train
                 && lineData.m_CargoTransport
                 && !lineData.m_PassengerTransport;
+        }
+
+        private void ApplyRandomColorIfEnabled(
+            Entity routeEntity,
+            Entity routePrefab,
+            PersistedRouteSelectionStore.PersistedSelectionFile persistedSelections)
+        {
+            if (!EntityManager.HasComponent<Game.Routes.Color>(routeEntity)
+                || !RouteColorRandomizationUtils.TryBuildFamily(EntityManager, routePrefab, out var family))
+            {
+                return;
+            }
+
+            var colorKey = RouteColorRandomizationUtils.BuildKey(family);
+            var colorPreference = PersistedRouteSelectionStore.FindColorPreference(persistedSelections, colorKey);
+            if (colorPreference?.enabled != true)
+            {
+                return;
+            }
+
+            var selectedColor = RouteColorRandomizationUtils.ChooseRandomColor(
+                EntityManager,
+                m_ColoredRouteQuery,
+                routeEntity,
+                family);
+
+            EntityManager.SetComponentData(routeEntity, new Game.Routes.Color(selectedColor));
+
+            if (EntityManager.HasBuffer<RouteVehicle>(routeEntity))
+            {
+                var routeVehicles = EntityManager.GetBuffer<RouteVehicle>(routeEntity, true);
+                for (var i = 0; i < routeVehicles.Length; i++)
+                {
+                    var vehicleEntity = routeVehicles[i].m_Vehicle;
+                    if (vehicleEntity == Entity.Null)
+                    {
+                        continue;
+                    }
+
+                    if (EntityManager.HasComponent<Game.Routes.Color>(vehicleEntity))
+                    {
+                        EntityManager.SetComponentData(vehicleEntity, new Game.Routes.Color(selectedColor));
+                    }
+                    else
+                    {
+                        EntityManager.AddComponentData(vehicleEntity, new Game.Routes.Color(selectedColor));
+                    }
+                }
+            }
+
+            var colorUpdated = EntityManager.CreateEntity(m_ColorUpdateArchetype);
+            EntityManager.SetComponentData(colorUpdated, new ColorUpdated(routeEntity));
         }
     }
 }

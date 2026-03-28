@@ -7,10 +7,27 @@ type PropsSection = {
     children: ReactNode;
 };
 
+type ToolButtonProps = {
+    focusKey?: unknown;
+    src?: string;
+    selected?: boolean;
+    multiSelect?: boolean;
+    disabled?: boolean;
+    tooltip?: ReactNode | null;
+    selectSound?: unknown;
+    uiTag?: string;
+    className?: string;
+    children?: ReactNode;
+    onSelect?: (value: unknown) => unknown;
+};
+
 const registryIndex = {
     Section: ["game-ui/game/components/tool-options/mouse-tool-options/mouse-tool-options.tsx", "Section"],
+    ToolButton: ["game-ui/game/components/tool-options/tool-button/tool-button.tsx", "ToolButton"],
+    ToolButtonTheme: ["game-ui/game/components/tool-options/tool-button/tool-button.module.scss", "classes"],
     Checkbox: ["game-ui/common/input/toggle/checkbox/checkbox.tsx", "Checkbox"],
     CheckboxTheme: ["game-ui/game/components/statistics-panel/menu/item/statistics-item.module.scss", "classes"],
+    FOCUS_DISABLED: ["game-ui/common/focus/focus-key.ts", "FOCUS_DISABLED"],
 };
 
 export class VanillaComponentResolver {
@@ -41,11 +58,23 @@ export class VanillaComponentResolver {
         return this.cachedData.Section ?? this.updateCache("Section");
     }
 
+    public get ToolButton(): ((props: ToolButtonProps) => JSX.Element) | undefined {
+        return this.cachedData.ToolButton ?? this.updateCache("ToolButton");
+    }
+
+    public get ToolButtonTheme(): { ToolButton?: string } | undefined {
+        return this.cachedData.ToolButtonTheme ?? this.updateCache("ToolButtonTheme");
+    }
+
     public get Checkbox(): ((props: any) => JSX.Element) | undefined {
         return this.cachedData.Checkbox ?? this.updateCache("Checkbox");
     }
 
     public get CheckboxTheme(): { label?: string } | undefined {
         return this.cachedData.CheckboxTheme ?? this.updateCache("CheckboxTheme");
+    }
+
+    public get FOCUS_DISABLED(): unknown {
+        return this.cachedData.FOCUS_DISABLED ?? this.updateCache("FOCUS_DISABLED");
     }
 }

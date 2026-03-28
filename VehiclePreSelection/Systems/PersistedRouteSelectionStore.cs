@@ -14,6 +14,9 @@ namespace VehiclePreSelection
         {
             [DataMember]
             public List<PersistedRouteSelection> routes = new List<PersistedRouteSelection>();
+
+            [DataMember]
+            public List<PersistedColorPreference> colors = new List<PersistedColorPreference>();
         }
 
         [DataContract]
@@ -27,6 +30,16 @@ namespace VehiclePreSelection
 
             [DataMember]
             public List<string> secondary = new List<string>();
+        }
+
+        [DataContract]
+        internal sealed class PersistedColorPreference
+        {
+            [DataMember]
+            public string key;
+
+            [DataMember]
+            public bool enabled;
         }
 
         private static readonly string s_Path =
@@ -53,6 +66,7 @@ namespace VehiclePreSelection
                 var serializer = new DataContractJsonSerializer(typeof(PersistedSelectionFile));
                 var file = serializer.ReadObject(stream) as PersistedSelectionFile ?? new PersistedSelectionFile();
                 file.routes ??= new List<PersistedRouteSelection>();
+                file.colors ??= new List<PersistedColorPreference>();
                 return file;
             }
             catch
@@ -104,6 +118,37 @@ namespace VehiclePreSelection
 
             var created = new PersistedRouteSelection { routeKey = routeKey };
             file.routes.Add(created);
+            return created;
+        }
+
+        internal static PersistedColorPreference FindColorPreference(PersistedSelectionFile file, string key)
+        {
+            if (file?.colors == null || string.IsNullOrEmpty(key))
+            {
+                return null;
+            }
+
+            for (var i = 0; i < file.colors.Count; i++)
+            {
+                if (file.colors[i].key == key)
+                {
+                    return file.colors[i];
+                }
+            }
+
+            return null;
+        }
+
+        internal static PersistedColorPreference FindOrCreateColorPreference(PersistedSelectionFile file, string key)
+        {
+            var existing = FindColorPreference(file, key);
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            var created = new PersistedColorPreference { key = key };
+            file.colors.Add(created);
             return created;
         }
     }

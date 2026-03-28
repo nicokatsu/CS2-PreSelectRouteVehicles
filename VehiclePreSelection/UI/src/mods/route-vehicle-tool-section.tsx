@@ -1,8 +1,10 @@
 import { bindValue, trigger, useValue } from "cs2/api";
 import { ModuleRegistryExtend } from "cs2/modding";
 import { Dropdown, DropdownToggle, Scrollable } from "cs2/ui";
+import { Children, Fragment, cloneElement, isValidElement, ReactElement, ReactNode, useLayoutEffect, useRef, useState } from "react";
 import { VanillaComponentResolver } from "./VanillaComponentResolver";
 import styles from "./route-vehicle-tool-section.module.scss";
+import colorRandomIcon from "../imgs/color-random.svg";
 
 type VehicleOption = {
     entityIndex: number;
@@ -25,6 +27,12 @@ const OFFICIAL_SECTION_DROPDOWN_CLASS = "dropdown_Hq9";
 const OFFICIAL_SECTION_DROPDOWN_LABEL_CLASS = "dropdown-label_VgD";
 const OFFICIAL_FLAG_LABEL_CLASS = "label_VM3";
 
+type ExtendableComponentResult = {
+    props?: {
+        children?: ReactNode;
+    };
+} & ReactElement;
+
 const group = "vehiclePreSelection";
 const isPlanningRoute$ = bindValue<boolean>(group, "isPlanningRoute", false);
 const supportsSecondarySelection$ = bindValue<boolean>(group, "supportsSecondarySelection", false);
@@ -34,6 +42,7 @@ const selectedPrimaryIndicesJson$ = bindValue<string>(group, "selectedPrimaryInd
 const selectedSecondaryIndicesJson$ = bindValue<string>(group, "selectedSecondaryIndicesJson", "[]");
 const currentPrimaryVehicle$ = bindValue<string>(group, "currentPrimaryVehicle", "");
 const currentSecondaryVehicle$ = bindValue<string>(group, "currentSecondaryVehicle", "");
+const autoRandomColorEnabled$ = bindValue<boolean>(group, "autoRandomColorEnabled", false);
 
 const parseVehicleOptions = (value: string): VehicleOption[] => {
     try {
@@ -146,6 +155,21 @@ const renderSelectedPills = (vehicles: VehicleOption[], selectedEntityIndices: S
 
 const shouldShowDropdown = (vehicles: VehicleOption[]) => vehicles.length > 1;
 
+const withAppendedToolSection = (result: ExtendableComponentResult, section: JSX.Element) => {
+    if (!isValidElement(result)) {
+        return result;
+    }
+
+    const nextChildren = [...Children.toArray(result.props?.children), section];
+    return cloneElement(result, {
+        ...result.props,
+        children: nextChildren,
+    });
+};
+
+const isColorSectionTitle = (title: ReactNode) =>
+    isValidElement(title) && title.props != null && Object.prototype.hasOwnProperty.call(title.props, "hash");
+
 type VehiclePickerProps = {
     vehicles: VehicleOption[];
     selectedIndices: Set<number>;
@@ -157,10 +181,26 @@ const VehiclePicker = ({
     selectedIndices,
     onToggle,
 }: VehiclePickerProps) => {
+    const shellRef = useRef<HTMLDivElement | null>(null);
+    const [menuWidth, setMenuWidth] = useState<number>(0);
     const selectedVehicle = getSelectedVehicle(vehicles, selectedIndices);
     const previewLabel = getSelectionPreviewLabel(vehicles, selectedIndices);
+
+    useLayoutEffect(() => {
+        const updateWidth = () => {
+            const nextWidth = shellRef.current?.getBoundingClientRect().width ?? 0;
+            if (nextWidth > 0) {
+                setMenuWidth(nextWidth);
+            }
+        };
+
+        updateWidth();
+        window.addEventListener("resize", updateWidth);
+        return () => window.removeEventListener("resize", updateWidth);
+    }, []);
+
     const content = (
-        <div className={styles.dropdownMenu}>
+        <div className={styles.dropdownMenu} style={menuWidth > 0 ? { width: `${menuWidth}px` } : undefined}>
             <Scrollable vertical trackVisibility="scrollable" className={styles.dropdownScrollable}>
                 <div className={styles.dropdownList}>
                     {vehicles.map((vehicle, index) => {
@@ -190,7 +230,7 @@ const VehiclePicker = ({
     );
 
     return (
-        <div className={styles.dropdownShell}>
+        <div className={styles.dropdownShell} ref={shellRef}>
             <Dropdown
                 alignment="left"
                 content={content}
@@ -216,53 +256,84 @@ const VehiclePicker = ({
 };
 
 export const RouteVehicleToolSection = () => {
+    const vanilla = VanillaComponentResolver.instance;
     const isPlanningRoute = useValue(isPlanningRoute$);
     const supportsSecondarySelection = useValue(supportsSecondarySelection$);
     const availablePrimaryVehicles = parseVehicleOptions(useValue(availablePrimaryVehiclesJson$));
     const availableSecondaryVehicles = parseVehicleOptions(useValue(availableSecondaryVehiclesJson$));
     const selectedPrimaryIndices = parseSelectedIndices(useValue(selectedPrimaryIndicesJson$));
     const selectedSecondaryIndices = parseSelectedIndices(useValue(selectedSecondaryIndicesJson$));
-    const currentPrimaryVehicle = useValue(currentPrimaryVehicle$);
-    const currentSecondaryVehicle = useValue(currentSecondaryVehicle$);
     const showPrimaryDropdown = shouldShowDropdown(availablePrimaryVehicles);
     const showSecondaryDropdown = supportsSecondarySelection && shouldShowDropdown(availableSecondaryVehicles);
+    const Section = vanilla.Section;
 
-    if (!isPlanningRoute) {
-        return null;
-    }
-
-    if (!showPrimaryDropdown && !showSecondaryDropdown) {
+    if (!isPlanningRoute || !Section) {
         return null;
     }
 
     return (
-        <div className={styles.container}>
+        <Fragment>
             {showPrimaryDropdown ? (
-                <div className={styles.row}>
+                <Section>
                     <VehiclePicker
                         vehicles={availablePrimaryVehicles}
                         selectedIndices={selectedPrimaryIndices}
                         onToggle={(index) => trigger(group, "togglePrimaryIndex", index)}
                     />
-                </div>
+                </Section>
             ) : null}
             {showSecondaryDropdown ? (
-                <div className={styles.row}>
+                <Section>
                     <VehiclePicker
                         vehicles={availableSecondaryVehicles}
                         selectedIndices={selectedSecondaryIndices}
                         onToggle={(index) => trigger(group, "toggleSecondaryIndex", index)}
                     />
-                </div>
+                </Section>
             ) : null}
-        </div>
+        </Fragment>
     );
 };
 
+export const RouteVehicleColorSection: ModuleRegistryExtend = (Component: any) => {
+    return (props) => {
+        const vanilla = VanillaComponentResolver.instance;
+        const isPlanningRoute = useValue(isPlanningRoute$);
+        const autoRandomColorEnabled = useValue(autoRandomColorEnabled$);
+        const ToolButton = vanilla.ToolButton;
+        const toolButtonTheme = vanilla.ToolButtonTheme;
+        const focusDisabled = vanilla.FOCUS_DISABLED;
+
+        if (!isPlanningRoute || !ToolButton || !isColorSectionTitle(props?.title)) {
+            return <Component {...props} />;
+        }
+
+        return (
+            <Component
+                {...props}
+                children={(
+                    <div className={styles.colorSectionRow}>
+                        <div className={styles.colorSectionField}>
+                            {props.children}
+                        </div>
+                        <ToolButton
+                            selected={autoRandomColorEnabled}
+                            onSelect={() => trigger(group, "setAutoRandomColorEnabled", !autoRandomColorEnabled)}
+                            focusKey={focusDisabled}
+                            className={`${toolButtonTheme?.ToolButton ?? ""} ${styles.colorToggleButtonInline}`.trim()}
+                        >
+                            <span className={styles.centeredContentButton} style={{ backgroundImage: `url(${colorRandomIcon})` }} />
+                        </ToolButton>
+                    </div>
+                )}
+            />
+        );
+    };
+};
+
 export const RouteVehicleMouseToolOptions: ModuleRegistryExtend = (Component: any) => {
-    return () => {
-        const results = Component();
-        results?.props?.children?.push?.(<RouteVehicleToolSection />);
-        return results;
+    return (props) => {
+        const result = Component(props) as ExtendableComponentResult;
+        return withAppendedToolSection(result, <RouteVehicleToolSection />);
     };
 };
