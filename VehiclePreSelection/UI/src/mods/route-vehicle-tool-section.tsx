@@ -1,7 +1,7 @@
 import { bindValue, trigger, useValue } from "cs2/api";
 import { ModuleRegistryExtend } from "cs2/modding";
-import { Dropdown, DropdownToggle, Scrollable } from "cs2/ui";
-import { Children, Fragment, cloneElement, isValidElement, ReactElement, ReactNode, useLayoutEffect, useRef, useState } from "react";
+import { Dropdown, DropdownToggle } from "cs2/ui";
+import { Children, Fragment, cloneElement, isValidElement, ReactElement, ReactNode } from "react";
 import { VanillaComponentResolver } from "./VanillaComponentResolver";
 import styles from "./route-vehicle-tool-section.module.scss";
 import colorRandomIcon from "../imgs/color-random.svg";
@@ -13,19 +13,6 @@ type VehicleOption = {
     thumbnail?: string;
     objectRequirementIcons?: string[] | null;
 };
-
-const OFFICIAL_WRAPBOX_CLASS = "wrapbox_yNA";
-const OFFICIAL_ITEM_CLASS = "item_yJO";
-const OFFICIAL_PILL_CLASS = "pill_rPg";
-const OFFICIAL_THUMB_CLASS = "thumb_LJh";
-const OFFICIAL_TEXT_CLASS = "label_j_K";
-const OFFICIAL_DROPDOWN_TOGGLE_CLASS = "dropdown-toggle_ODx dropdown-toggle_prl";
-const OFFICIAL_DROPDOWN_INDICATOR_CLASS = "indicator_JII";
-const OFFICIAL_DROPDOWN_MENU_CLASS = "dropdown-menu_xq2 dropdown-menu_Swd";
-const OFFICIAL_DROPDOWN_ITEM_CLASS = "dropdown-item_R_l";
-const OFFICIAL_SECTION_DROPDOWN_CLASS = "dropdown_Hq9";
-const OFFICIAL_SECTION_DROPDOWN_LABEL_CLASS = "dropdown-label_VgD";
-const OFFICIAL_FLAG_LABEL_CLASS = "label_VM3";
 
 type ExtendableComponentResult = {
     props?: {
@@ -91,43 +78,33 @@ const getSelectionPreviewLabel = (vehicles: VehicleOption[], selectedEntityIndic
 const getSelectedVehicles = (vehicles: VehicleOption[], selectedEntityIndices: Set<number>) =>
     vehicles.filter((vehicle) => isVehicleSelected(vehicle, selectedEntityIndices));
 
-const renderRequirementIcons = (vehicle: VehicleOption) =>
-    vehicle.objectRequirementIcons?.length ? (
-        <div className={styles.requirementsInline}>
-            {vehicle.objectRequirementIcons.map((icon, index) => (
-                <img key={`${vehicle.entityIndex}-req-${index}`} src={icon} className={styles.optionRequirement} />
-            ))}
-        </div>
-    ) : null;
+const joinClasses = (...classes: Array<string | undefined | null | false>) =>
+    classes.filter(Boolean).join(" ");
 
-const renderVehicleOption = (vehicle: VehicleOption, selected: boolean, disabled: boolean) => (
-    <div className={`${OFFICIAL_DROPDOWN_ITEM_CLASS} ${styles.option} ${selected ? styles.optionSelected : ""} ${disabled ? styles.optionDisabled : ""}`}>
-        <div className={styles.checkboxHost}>
-            {(() => {
-                const Checkbox = VanillaComponentResolver.instance.Checkbox;
-                const checkboxLabelClass = VanillaComponentResolver.instance.CheckboxTheme?.label;
+const renderVehicleImages = (vehicle: VehicleOption, className: string | undefined, keyPrefix: string) => (
+    <Fragment>
+        {vehicle.thumbnail ? <img key={`${keyPrefix}-thumbnail`} src={vehicle.thumbnail} className={className} /> : null}
+        {vehicle.objectRequirementIcons?.map((icon, index) => (
+            <img key={`${keyPrefix}-req-${index}`} src={icon} className={className} />
+        ))}
+    </Fragment>
+);
 
-                return Checkbox ? (
-                    <Checkbox
-                        checked={selected}
-                        disabled={disabled}
-                        className={checkboxLabelClass}
-                    />
-                ) : null;
-            })()}
-        </div>
-        {vehicle.thumbnail ? <img src={vehicle.thumbnail} className={`${styles.optionThumb} ${OFFICIAL_THUMB_CLASS}`} /> : null}
-        {renderRequirementIcons(vehicle)}
-        <div className={`${styles.optionLabel} ${OFFICIAL_FLAG_LABEL_CLASS}`} style={{ color: "rgba(255,255,255,0.96)" }}>{vehicle.name}</div>
+const renderVehicleOption = (
+    vehicle: VehicleOption,
+    theme: { item?: string; thumb?: string; label?: string }
+) => (
+    <div className={theme.item}>
+        {renderVehicleImages(vehicle, theme.thumb, `option-${vehicle.entityIndex}`)}
+        <div className={theme.label}>{vehicle.name}</div>
     </div>
 );
 
-const renderSelectionPreview = (vehicle: VehicleOption | null, fallback: string) => (
+const renderSelectionPreview = (vehicle: VehicleOption | null, fallback: string, labelClassName?: string) => (
     <div className={styles.selectionPreview}>
         <div className={styles.selectionMain}>
-            {vehicle?.thumbnail ? <img src={vehicle.thumbnail} className={styles.selectionThumb} /> : null}
-            {vehicle ? renderRequirementIcons(vehicle) : null}
-            {fallback ? <div className={`${styles.selectionLabel} ${OFFICIAL_SECTION_DROPDOWN_LABEL_CLASS}`}>{fallback}</div> : null}
+            {vehicle ? renderVehicleImages(vehicle, styles.selectionThumb, `preview-${vehicle.entityIndex}`) : null}
+            {fallback ? <div className={joinClasses(styles.selectionLabel, labelClassName)}>{fallback}</div> : null}
         </div>
     </div>
 );
@@ -138,19 +115,18 @@ const renderSelectedPills = (vehicles: VehicleOption[], selectedEntityIndices: S
         return null;
     }
 
-    return (
-        <div className={`${styles.selectedWrapbox} ${OFFICIAL_WRAPBOX_CLASS}`}>
-            {selectedVehicles.map((vehicle) => (
-                <div key={`pill-${vehicle.entityIndex}`} className={`${styles.selectedPill} ${OFFICIAL_ITEM_CLASS} ${OFFICIAL_PILL_CLASS}`}>
-                    {vehicle.thumbnail ? <img src={vehicle.thumbnail} className={`${styles.selectedThumb} ${OFFICIAL_THUMB_CLASS}`} /> : null}
-                    {vehicle.objectRequirementIcons?.map((icon, index) => (
-                        <img key={`pill-${vehicle.entityIndex}-req-${index}`} src={icon} className={`${styles.selectedThumb} ${OFFICIAL_THUMB_CLASS}`} />
-                    ))}
-                    <div className={`${styles.selectedText} ${OFFICIAL_TEXT_CLASS}`}>{vehicle.name}</div>
-                </div>
-            ))}
+    const vanilla = VanillaComponentResolver.instance;
+    const InfoWrapBox = vanilla.InfoWrapBox!;
+    const theme = vanilla.SelectVehiclesSectionTheme!;
+    const content = selectedVehicles.map((vehicle) => (
+        <div key={`pill-${vehicle.entityIndex}`} className={joinClasses(theme.item, theme.pill)}>
+            {renderVehicleImages(vehicle, theme.thumb, `pill-${vehicle.entityIndex}`)}
+            <div className={theme.label}>{vehicle.name}</div>
         </div>
-    );
+    ));
+    const className = joinClasses(styles.selectedWrapbox, theme.wrapbox);
+
+    return <InfoWrapBox className={className}>{content}</InfoWrapBox>;
 };
 
 const shouldShowDropdown = (vehicles: VehicleOption[]) => vehicles.length > 1;
@@ -181,73 +157,50 @@ const VehiclePicker = ({
     selectedIndices,
     onToggle,
 }: VehiclePickerProps) => {
-    const shellRef = useRef<HTMLDivElement | null>(null);
-    const [menuWidth, setMenuWidth] = useState<number>(0);
     const selectedVehicle = getSelectedVehicle(vehicles, selectedIndices);
     const previewLabel = getSelectionPreviewLabel(vehicles, selectedIndices);
-
-    useLayoutEffect(() => {
-        const updateWidth = () => {
-            const nextWidth = shellRef.current?.getBoundingClientRect().width ?? 0;
-            if (nextWidth > 0) {
-                setMenuWidth(nextWidth);
-            }
-        };
-
-        updateWidth();
-        window.addEventListener("resize", updateWidth);
-        return () => window.removeEventListener("resize", updateWidth);
-    }, []);
+    const vanilla = VanillaComponentResolver.instance;
+    const DropdownFlagItem = vanilla.DropdownFlagItem!;
+    const focusDisabled = vanilla.FOCUS_DISABLED;
+    const gameDropdownTheme = vanilla.GameDropdownTheme!;
+    const selectVehiclesTheme = vanilla.SelectVehiclesSectionTheme!;
+    const selectVehiclesDropdownItemTheme = vanilla.SelectVehiclesDropdownItemTheme!;
 
     const content = (
-        <div className={styles.dropdownMenu} style={menuWidth > 0 ? { width: `${menuWidth}px` } : undefined}>
-            <Scrollable vertical trackVisibility="scrollable" className={styles.dropdownScrollable}>
-                <div className={styles.dropdownList}>
-                    {vehicles.map((vehicle, index) => {
-                        const isSelected = isVehicleSelected(vehicle, selectedIndices);
-                        const disableUnselect = isSelected && selectedIndices.size === 1;
-                        return (
-                            <div
-                                key={`${vehicle.entityIndex}-${index}`}
-                                className={`${styles.dropdownButton} ${disableUnselect ? styles.dropdownButtonDisabled : ""}`}
-                                onMouseDown={(event) => {
-                                    event.preventDefault();
-                                    event.stopPropagation();
-                                    if (disableUnselect) {
-                                        return;
-                                    }
-                                    onToggle(index);
-                                }}
-                                role="button"
-                            >
-                                {renderVehicleOption(vehicle, isSelected, disableUnselect)}
-                            </div>
-                        );
-                    })}
-                </div>
-            </Scrollable>
-        </div>
+        <Fragment>
+            {vehicles.map((vehicle, index) => {
+                const isSelected = isVehicleSelected(vehicle, selectedIndices);
+                const disableUnselect = isSelected && selectedIndices.size === 1;
+                return (
+                    <DropdownFlagItem
+                        key={`${vehicle.entityIndex}-${index}`}
+                        value={index}
+                        checked={isSelected}
+                        disabled={disableUnselect}
+                        focusKey={focusDisabled}
+                        theme={selectVehiclesDropdownItemTheme}
+                        onChange={() => onToggle(index)}
+                    >
+                        {renderVehicleOption(vehicle, selectVehiclesTheme)}
+                    </DropdownFlagItem>
+                );
+            })}
+        </Fragment>
     );
 
     return (
-        <div className={styles.dropdownShell} ref={shellRef}>
+        <div className={styles.dropdownShell}>
             <Dropdown
                 alignment="left"
                 content={content}
-                theme={{
-                    dropdownMenu: `${OFFICIAL_DROPDOWN_MENU_CLASS} ${styles.dropdownMenu}`,
-                    scrollable: styles.dropdownScrollable,
-                }}
+                theme={gameDropdownTheme}
             >
-                <DropdownToggle
-                    theme={{
-                        dropdownToggle: `${OFFICIAL_DROPDOWN_TOGGLE_CLASS} ${OFFICIAL_SECTION_DROPDOWN_CLASS} ${styles.dropdownToggle}`,
-                        label: styles.selectionLabelSlot,
-                        indicator: `${OFFICIAL_DROPDOWN_INDICATOR_CLASS} ${styles.selectionChevron}`,
-                    }}
-                    className={styles.dropdownToggleRoot}
-                >
-                    {renderSelectionPreview(selectedVehicle, previewLabel)}
+                <DropdownToggle className={joinClasses(selectVehiclesTheme.dropdown, styles.dropdownToggle)}>
+                    {renderSelectionPreview(
+                        selectedVehicle,
+                        previewLabel,
+                        selectVehiclesTheme.dropdownLabel
+                    )}
                 </DropdownToggle>
             </Dropdown>
             {renderSelectedPills(vehicles, selectedIndices)}
@@ -317,13 +270,12 @@ export const RouteVehicleColorSection: ModuleRegistryExtend = (Component: any) =
                             {props.children}
                         </div>
                         <ToolButton
+                            src={colorRandomIcon}
                             selected={autoRandomColorEnabled}
                             onSelect={() => trigger(group, "setAutoRandomColorEnabled", !autoRandomColorEnabled)}
                             focusKey={focusDisabled}
                             className={`${toolButtonTheme?.ToolButton ?? ""} ${styles.colorToggleButtonInline}`.trim()}
-                        >
-                            <span className={styles.centeredContentButton} style={{ backgroundImage: `url(${colorRandomIcon})` }} />
-                        </ToolButton>
+                        />
                     </div>
                 )}
             />

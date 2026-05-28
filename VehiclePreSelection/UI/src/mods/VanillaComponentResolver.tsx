@@ -21,12 +21,55 @@ type ToolButtonProps = {
     onSelect?: (value: unknown) => unknown;
 };
 
+type InfoWrapBoxProps = {
+    className?: string;
+    children?: ReactNode;
+};
+
+type GameDropdownTheme = {
+    dropdownToggle?: string;
+    indicator?: string;
+    dropdownMenu?: string;
+    scrollable?: string;
+    dropdownItem?: string;
+};
+
+type DropdownFlagItemTheme = {
+    dropdownFlagItem?: string;
+    toggle?: string;
+    label?: string;
+};
+
+type DropdownFlagItemProps = {
+    focusKey?: unknown;
+    value: unknown;
+    checked?: boolean;
+    disabled?: boolean;
+    theme?: DropdownFlagItemTheme;
+    className?: string;
+    children?: ReactNode;
+    onChange?: (value: any, checked: boolean) => unknown;
+};
+
+type SelectVehiclesSectionTheme = {
+    dropdown?: string;
+    dropdownLabel?: string;
+    wrapbox?: string;
+    item?: string;
+    pill?: string;
+    thumb?: string;
+    label?: string;
+};
+
 const registryIndex = {
     Section: ["game-ui/game/components/tool-options/mouse-tool-options/mouse-tool-options.tsx", "Section"],
     ToolButton: ["game-ui/game/components/tool-options/tool-button/tool-button.tsx", "ToolButton"],
     ToolButtonTheme: ["game-ui/game/components/tool-options/tool-button/tool-button.module.scss", "classes"],
-    Checkbox: ["game-ui/common/input/toggle/checkbox/checkbox.tsx", "Checkbox"],
-    CheckboxTheme: ["game-ui/game/components/statistics-panel/menu/item/statistics-item.module.scss", "classes"],
+    DropdownFlagItem: ["game-ui/common/input/dropdown/items/dropdown-flag-item.tsx", "DropdownFlagItem"],
+    GameDropdownTheme: ["game-ui/game/themes/game-dropdown.module.scss", "classes"],
+    InfoWrapBox: ["game-ui/game/components/selected-info-panel/shared-components/info-section/info-wrap-box.tsx", "InfoWrapBox"],
+    SelectVehiclesSectionTheme: ["game-ui/game/components/selected-info-panel/selected-info-sections/route-sections/select-vehicles-section/select-vehicles-section.module.scss", "classes"],
+    SelectVehiclesDropdownItemTheme: ["game-ui/game/components/selected-info-panel/selected-info-sections/route-sections/select-vehicles-section/select-vehicles-dropdown-item.module.scss", "classes"],
     FOCUS_DISABLED: ["game-ui/common/focus/focus-key.ts", "FOCUS_DISABLED"],
 };
 
@@ -66,12 +109,24 @@ export class VanillaComponentResolver {
         return this.cachedData.ToolButtonTheme ?? this.updateCache("ToolButtonTheme");
     }
 
-    public get Checkbox(): ((props: any) => JSX.Element) | undefined {
-        return this.cachedData.Checkbox ?? this.updateCache("Checkbox");
+    public get DropdownFlagItem(): ((props: DropdownFlagItemProps) => JSX.Element) | undefined {
+        return this.cachedData.DropdownFlagItem ?? this.updateCache("DropdownFlagItem");
     }
 
-    public get CheckboxTheme(): { label?: string } | undefined {
-        return this.cachedData.CheckboxTheme ?? this.updateCache("CheckboxTheme");
+    public get GameDropdownTheme(): GameDropdownTheme | undefined {
+        return this.cachedData.GameDropdownTheme ?? this.updateCache("GameDropdownTheme");
+    }
+
+    public get InfoWrapBox(): ((props: InfoWrapBoxProps) => JSX.Element) | undefined {
+        return this.cachedData.InfoWrapBox ?? this.updateCache("InfoWrapBox");
+    }
+
+    public get SelectVehiclesSectionTheme(): SelectVehiclesSectionTheme | undefined {
+        return this.cachedData.SelectVehiclesSectionTheme ?? this.updateCache("SelectVehiclesSectionTheme");
+    }
+
+    public get SelectVehiclesDropdownItemTheme(): DropdownFlagItemTheme | undefined {
+        return this.cachedData.SelectVehiclesDropdownItemTheme ?? this.updateCache("SelectVehiclesDropdownItemTheme");
     }
 
     public get FOCUS_DISABLED(): unknown {
