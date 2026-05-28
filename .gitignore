@@ -3,6 +3,7 @@ obj/
 Library/
 
 .idea/
+.vs/
 *.DotSettings.user
 
 VehiclePreSelection/bin/
