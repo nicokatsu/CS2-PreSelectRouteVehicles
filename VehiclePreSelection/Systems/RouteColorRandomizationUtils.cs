@@ -54,35 +54,27 @@ namespace VehiclePreSelection
 
         internal static bool TryBuildFamily(EntityManager entityManager, Entity routePrefab, out RouteColorFamily family)
         {
-            family = default;
-
-            if (entityManager.HasComponent<TransportLineData>(routePrefab))
+            if (!RouteSelectionContext.TryCreate(entityManager, routePrefab, out var routeContext))
             {
-                var lineData = entityManager.GetComponentData<TransportLineData>(routePrefab);
-                family = new RouteColorFamily
-                {
-                    TransportType = lineData.m_TransportType,
-                    CargoTransport = lineData.m_CargoTransport,
-                    PassengerTransport = lineData.m_PassengerTransport
-                };
-                return true;
+                family = default;
+                return false;
             }
 
-            if (entityManager.HasComponent<WorkRouteData>(routePrefab))
-            {
-                var workRouteData = entityManager.GetComponentData<WorkRouteData>(routePrefab);
-                family = new RouteColorFamily
-                {
-                    IsWorkRoute = true,
-                    TransportType = TransportType.Work,
-                    CargoTransport = true,
-                    MapFeature = workRouteData.m_MapFeature,
-                    RoadTypes = workRouteData.m_RoadType
-                };
-                return true;
-            }
+            return TryBuildFamily(routeContext, out family);
+        }
 
-            return false;
+        internal static bool TryBuildFamily(RouteSelectionContext routeContext, out RouteColorFamily family)
+        {
+            family = new RouteColorFamily
+            {
+                IsWorkRoute = routeContext.IsWorkRoute,
+                TransportType = routeContext.TransportType,
+                CargoTransport = routeContext.CargoTransport,
+                PassengerTransport = routeContext.PassengerTransport,
+                MapFeature = routeContext.MapFeature,
+                RoadTypes = routeContext.RoadTypes
+            };
+            return true;
         }
 
         internal static string BuildKey(Entity routePrefab, EntityManager entityManager, PrefabSystem prefabSystem)

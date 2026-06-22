@@ -74,8 +74,8 @@ const registryIndex = {
 };
 
 export class VanillaComponentResolver {
-    public static get instance(): VanillaComponentResolver {
-        return this._instance!;
+    public static get instance(): VanillaComponentResolver | undefined {
+        return this._instance;
     }
 
     private static _instance?: VanillaComponentResolver;

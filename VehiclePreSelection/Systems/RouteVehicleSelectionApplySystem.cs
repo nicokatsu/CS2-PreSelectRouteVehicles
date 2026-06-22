@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Game;
 using Game.Common;
 using Game.Prefabs;
@@ -7,7 +6,6 @@ using Game.Tools;
 using Game.Vehicles;
 using Unity.Collections;
 using Unity.Entities;
-using UnityEngine;
 
 namespace VehiclePreSelection
 {
@@ -18,6 +16,7 @@ namespace VehiclePreSelection
         private EntityQuery m_ColoredRouteQuery;
         private EntityQuery m_TransportVehiclePrefabQuery;
         private EntityQuery m_WorkVehiclePrefabQuery;
+        private VehiclePrefabLookup m_VehiclePrefabLookup;
         private EntityArchetype m_ColorUpdateArchetype;
 
         protected override void OnCreate()
@@ -40,7 +39,12 @@ namespace VehiclePreSelection
                 ComponentType.Exclude<Deleted>());
             m_TransportVehiclePrefabQuery = GetEntityQuery(TransportVehicleSelectData.GetEntityQueryDesc());
             m_WorkVehiclePrefabQuery = GetEntityQuery(WorkVehicleSelectData.GetEntityQueryDesc());
+            m_VehiclePrefabLookup = new VehiclePrefabLookup(
+                m_PrefabSystem,
+                m_TransportVehiclePrefabQuery,
+                m_WorkVehiclePrefabQuery);
             m_ColorUpdateArchetype = EntityManager.CreateArchetype(ComponentType.ReadWrite<Game.Common.Event>(), ComponentType.ReadWrite<ColorUpdated>());
+            Mod.LogEssential("[VehiclePreSelection] Apply system created. Created route query and official vehicle prefab queries registered.");
         }
 
         protected override void OnUpdate()
@@ -52,6 +56,7 @@ namespace VehiclePreSelection
 
             var persistedSelections = PersistedRouteSelectionStore.Load();
             using var routes = m_CreatedRouteQuery.ToEntityArray(Allocator.Temp);
+            Mod.LogDiagnostic($"[VehiclePreSelection] Applying persisted route preferences to created routes. Count={routes.Length}; Path={PersistedRouteSelectionStore.PathValue}");
 
             for (var i = 0; i < routes.Length; i++)
             {
@@ -72,98 +77,30 @@ namespace VehiclePreSelection
 
         private void ApplySavedSelection(Entity routeEntity, Entity routePrefab, PersistedRouteSelectionStore.PersistedRouteSelection savedSelection)
         {
-            var primaryPrefabs = ResolvePrefabs(savedSelection.primary);
-            var secondaryPrefabs = ResolvePrefabs(savedSelection.secondary);
-            var supportsSecondary = SupportsSecondarySelection(routePrefab);
+            if (!RouteSelectionContext.TryCreate(EntityManager, routePrefab, out var routeContext))
+            {
+                Mod.LogDiagnostic(
+                    $"[VehiclePreSelection] Skipped saved selection for unsupported route prefab. RouteEntity={routeEntity.Index}; RoutePrefab={m_PrefabSystem.GetPrefabName(routePrefab)}");
+                return;
+            }
 
-            if (primaryPrefabs.Count == 0 && (!supportsSecondary || secondaryPrefabs.Count == 0))
+            var primaryPrefabs = m_VehiclePrefabLookup.ResolvePrefabs(savedSelection.primary);
+            var secondaryPrefabs = m_VehiclePrefabLookup.ResolvePrefabs(savedSelection.secondary);
+            var includeSecondary = routeContext.NeedsSecondarySelection;
+
+            if (primaryPrefabs.Count == 0 && (!includeSecondary || secondaryPrefabs.Count == 0))
             {
                 return;
             }
 
-            var buffer = EntityManager.HasBuffer<VehicleModel>(routeEntity)
-                ? EntityManager.GetBuffer<VehicleModel>(routeEntity)
-                : EntityManager.AddBuffer<VehicleModel>(routeEntity);
-
-            buffer.Clear();
-
-            for (var i = 0; i < primaryPrefabs.Count; i++)
-            {
-                buffer.Add(new VehicleModel
-                {
-                    m_PrimaryPrefab = primaryPrefabs[i],
-                    m_SecondaryPrefab = Entity.Null
-                });
-            }
-
-            if (supportsSecondary)
-            {
-                for (var i = 0; i < secondaryPrefabs.Count; i++)
-                {
-                    buffer.Add(new VehicleModel
-                    {
-                        m_PrimaryPrefab = Entity.Null,
-                        m_SecondaryPrefab = secondaryPrefabs[i]
-                    });
-                }
-            }
-        }
-
-        private List<Entity> ResolvePrefabs(List<string> prefabNames)
-        {
-            var result = new List<Entity>();
-            if (prefabNames == null || prefabNames.Count == 0)
-            {
-                return result;
-            }
-
-            using var transportVehicles = m_TransportVehiclePrefabQuery.ToEntityArray(Allocator.Temp);
-            using var workVehicles = m_WorkVehiclePrefabQuery.ToEntityArray(Allocator.Temp);
-
-            for (var i = 0; i < prefabNames.Count; i++)
-            {
-                var prefabName = prefabNames[i];
-                if (string.IsNullOrEmpty(prefabName))
-                {
-                    continue;
-                }
-
-                if (TryFindPrefab(transportVehicles, prefabName, out var prefab)
-                    || TryFindPrefab(workVehicles, prefabName, out prefab))
-                {
-                    result.Add(prefab);
-                }
-            }
-
-            return result;
-        }
-
-        private bool TryFindPrefab(NativeArray<Entity> prefabs, string prefabName, out Entity prefab)
-        {
-            for (var i = 0; i < prefabs.Length; i++)
-            {
-                if (m_PrefabSystem.GetPrefabName(prefabs[i]) == prefabName)
-                {
-                    prefab = prefabs[i];
-                    return true;
-                }
-            }
-
-            prefab = Entity.Null;
-            return false;
-        }
-
-        private bool SupportsSecondarySelection(Entity routePrefab)
-        {
-            if (!EntityManager.HasComponent<TransportLineData>(routePrefab))
-            {
-                return false;
-            }
-
-            var lineData = EntityManager.GetComponentData<TransportLineData>(routePrefab);
-            return lineData.m_TransportType == TransportType.Train
-                && lineData.m_CargoTransport
-                && !lineData.m_PassengerTransport;
+            var buffer = VehicleModelSelectionWriter.EnsureBuffer(EntityManager, routeEntity);
+            VehicleModelSelectionWriter.WriteSelections(
+                buffer,
+                primaryPrefabs,
+                secondaryPrefabs,
+                includeSecondary);
+            Mod.LogDiagnostic(
+                $"[VehiclePreSelection] Applied saved route vehicle selection. RouteEntity={routeEntity.Index}; RoutePrefab={m_PrefabSystem.GetPrefabName(routePrefab)}; PrimaryCount={primaryPrefabs.Count}; SecondaryCount={(includeSecondary ? secondaryPrefabs.Count : 0)}; Context={routeContext.ToDiagnosticString()}");
         }
 
         private void ApplyRandomColorIfEnabled(
@@ -192,6 +129,7 @@ namespace VehiclePreSelection
 
             EntityManager.SetComponentData(routeEntity, new Game.Routes.Color(selectedColor));
 
+            var vehicleColorUpdates = 0;
             if (EntityManager.HasBuffer<RouteVehicle>(routeEntity))
             {
                 var routeVehicles = EntityManager.GetBuffer<RouteVehicle>(routeEntity, true);
@@ -211,11 +149,15 @@ namespace VehiclePreSelection
                     {
                         EntityManager.AddComponentData(vehicleEntity, new Game.Routes.Color(selectedColor));
                     }
+
+                    vehicleColorUpdates++;
                 }
             }
 
             var colorUpdated = EntityManager.CreateEntity(m_ColorUpdateArchetype);
             EntityManager.SetComponentData(colorUpdated, new ColorUpdated(routeEntity));
+            Mod.LogDiagnostic(
+                $"[VehiclePreSelection] Applied random route color. RouteEntity={routeEntity.Index}; Key={colorKey}; Color=rgba({selectedColor.r},{selectedColor.g},{selectedColor.b},{selectedColor.a}); VehicleUpdates={vehicleColorUpdates}");
         }
     }
 }

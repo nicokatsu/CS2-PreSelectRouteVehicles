@@ -69,8 +69,9 @@ namespace VehiclePreSelection
                 file.colors ??= new List<PersistedColorPreference>();
                 return file;
             }
-            catch
+            catch (System.Exception ex)
             {
+                Mod.LogException(ex, $"Failed to load persisted selections. Path={s_Path}.");
                 return new PersistedSelectionFile();
             }
         }
@@ -78,6 +79,7 @@ namespace VehiclePreSelection
         internal static void Save(PersistedSelectionFile file)
         {
             file.routes ??= new List<PersistedRouteSelection>();
+            file.colors ??= new List<PersistedColorPreference>();
             var directory = System.IO.Path.GetDirectoryName(s_Path);
             if (!string.IsNullOrEmpty(directory))
             {

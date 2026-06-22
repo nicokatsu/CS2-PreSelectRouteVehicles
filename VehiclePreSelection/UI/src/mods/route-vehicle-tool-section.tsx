@@ -116,8 +116,12 @@ const renderSelectedPills = (vehicles: VehicleOption[], selectedEntityIndices: S
     }
 
     const vanilla = VanillaComponentResolver.instance;
-    const InfoWrapBox = vanilla.InfoWrapBox!;
-    const theme = vanilla.SelectVehiclesSectionTheme!;
+    const InfoWrapBox = vanilla?.InfoWrapBox;
+    const theme = vanilla?.SelectVehiclesSectionTheme;
+    if (!InfoWrapBox || !theme) {
+        return null;
+    }
+
     const content = selectedVehicles.map((vehicle) => (
         <div key={`pill-${vehicle.entityIndex}`} className={joinClasses(theme.item, theme.pill)}>
             {renderVehicleImages(vehicle, theme.thumb, `pill-${vehicle.entityIndex}`)}
@@ -160,11 +164,15 @@ const VehiclePicker = ({
     const selectedVehicle = getSelectedVehicle(vehicles, selectedIndices);
     const previewLabel = getSelectionPreviewLabel(vehicles, selectedIndices);
     const vanilla = VanillaComponentResolver.instance;
-    const DropdownFlagItem = vanilla.DropdownFlagItem!;
-    const focusDisabled = vanilla.FOCUS_DISABLED;
-    const gameDropdownTheme = vanilla.GameDropdownTheme!;
-    const selectVehiclesTheme = vanilla.SelectVehiclesSectionTheme!;
-    const selectVehiclesDropdownItemTheme = vanilla.SelectVehiclesDropdownItemTheme!;
+    const DropdownFlagItem = vanilla?.DropdownFlagItem;
+    const focusDisabled = vanilla?.FOCUS_DISABLED;
+    const gameDropdownTheme = vanilla?.GameDropdownTheme;
+    const selectVehiclesTheme = vanilla?.SelectVehiclesSectionTheme;
+    const selectVehiclesDropdownItemTheme = vanilla?.SelectVehiclesDropdownItemTheme;
+
+    if (!DropdownFlagItem || !gameDropdownTheme || !selectVehiclesTheme || !selectVehiclesDropdownItemTheme) {
+        return null;
+    }
 
     const content = (
         <Fragment>
@@ -218,7 +226,7 @@ export const RouteVehicleToolSection = () => {
     const selectedSecondaryIndices = parseSelectedIndices(useValue(selectedSecondaryIndicesJson$));
     const showPrimaryDropdown = shouldShowDropdown(availablePrimaryVehicles);
     const showSecondaryDropdown = supportsSecondarySelection && shouldShowDropdown(availableSecondaryVehicles);
-    const Section = vanilla.Section;
+    const Section = vanilla?.Section;
 
     if (!isPlanningRoute || !Section) {
         return null;
@@ -253,9 +261,9 @@ export const RouteVehicleColorSection: ModuleRegistryExtend = (Component: any) =
         const vanilla = VanillaComponentResolver.instance;
         const isPlanningRoute = useValue(isPlanningRoute$);
         const autoRandomColorEnabled = useValue(autoRandomColorEnabled$);
-        const ToolButton = vanilla.ToolButton;
-        const toolButtonTheme = vanilla.ToolButtonTheme;
-        const focusDisabled = vanilla.FOCUS_DISABLED;
+        const ToolButton = vanilla?.ToolButton;
+        const toolButtonTheme = vanilla?.ToolButtonTheme;
+        const focusDisabled = vanilla?.FOCUS_DISABLED;
 
         if (!isPlanningRoute || !ToolButton || !isColorSectionTitle(props?.title)) {
             return <Component {...props} />;
