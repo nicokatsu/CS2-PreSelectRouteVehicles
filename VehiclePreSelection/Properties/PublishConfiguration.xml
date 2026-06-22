@@ -7,8 +7,12 @@
 	<ShortDescription Value="Choose route vehicles and randomize route colors while planning." />
 	<!--Long description of the mod. Single line or multi line. Supports minimal markdown subset-->
 	<!--LongDescription Value="This is a long description" /-->
-	<LongDescription>Tired of the game giving you a vehicle you did not want to use, or making route colors tedious to manage? Route Planning Extension lets you choose vehicles in advance while you are still planning the line. Pick them directly from the route planning toolbox, use multi-select, save selections for different route types, and optionally enable random route colors with separate toggles per transport type. Random colors are applied when the route is created.
-	</LongDescription>
+	<LongDescription>## Plan routes with the vehicles you want
+Choose route vehicles before the line is created and keep route colors predictable.
+
+* Select and persist available vehicles from the route planning toolbox by route type.
+* Enable random route colors per transport type, applied automatically when each route is created.
+</LongDescription>
 	<!--Thumbnail-->
 	<Thumbnail Value="Properties/Thumbnail.png" />
 	<!--Screenshot, can be set multiple times-->
